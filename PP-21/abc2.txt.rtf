@@ -1,0 +1,227 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2636
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww33400\viewh20440\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 import java.io.*; \
+import java.text.*; \
+import java.util.*; \
+import java.net.*; \
+import java.nio.file.Files;\
+import java.nio.file.Paths;\
+import java.nio.file.Path;\
+import java.nio.file.NoSuchFileException;\
+import java.nio.file.DirectoryNotEmptyException;\
+  \
+ \
+public class MultiThreadServer \
+\{   \
+    public static Integer commandId=0;\
+    public Thread t2;\
+    public static Map<Integer, Boolean> terminateMap= new HashMap<Integer, Boolean>();\
+    public static Map<String, Boolean> ReadMap= new HashMap<String, Boolean>();\
+    public static Map<String, Boolean> WriteMap= new HashMap<String, Boolean>();\
+    \
+    \
+    public static void main(String[] args) throws IOException  \
+    \{ \
+        \
+        ServerSocket serversocket1 = new ServerSocket(5000); \
+        \
+        ServerSocket serversocket2 = new ServerSocket(6000);\
+          \
+        // running infinite loop for getting \
+        // client request \
+        while (true)  \
+        \{ \
+            Socket socket1 = null; \
+            Socket socket2 = null;\
+              \
+            try \
+            \{ \
+                //MAP\
+                \
+                // socket object to receive incoming client requests \
+                sock1 = ss1.accept(); \
+                sock2 = ss2.accept();\
+                  \
+                System.out.println("A new client is connected to sockets: " + sock1+ " and " +sock2); \
+                //BufferedReader keyRead = new BufferedReader(new InputStreamReader(System.in));\
+                \
+                    // sending to client (pwrite object)\
+                    //OutputStream ostream = sock1.getOutputStream(); \
+                    //PrintWriter pwrite = new PrintWriter(ostream, true);\
+\
+                    // receiving from server ( receiveRead  object)\
+                    //InputStream istream = sock1.getInputStream();\
+                    //BufferedReader receiveRead = new BufferedReader(new InputStreamReader(istream));\
+                    //DataInputStream clientData = new DataInputStream(istream);\
+                    DataInputStream dis= new DataInputStream(sock1.getInputStream());\
+                    DataOutputStream dos=new DataOutputStream(sock1.getOutputStream());\
+                    DataInputStream dis2 = new DataInputStream(sock2.getInputStream());\
+                    System.out.println("Assigning a new thread for this client at Nport"); \
+\
+                    // create a new thread object \
+                    Thread t = new ClientHandler(dis,dos);\
+                    Thread t2 = new Client_Terminate(dis2);\
+\
+                    // Invoking the start() method \
+                    t.start(); \
+                    t2.start();\
+                \}\
+                catch (Exception e)\{ \
+                sock1.close(); \
+                sock2.close();\
+                e.printStackTrace(); \
+            \} \
+        \} \
+    \} \
+\} \
+  \
+// ClientHandler class \
+class ClientHandler extends Thread  \
+\{ \
+   \
+    final DataInputStream dis;\
+    final DataOutputStream dos;\
+    //Creating an object for ServerClass class-Danny\
+    ServerClass server = new ServerClass(System.getProperty("user.dir"));\
+      \
+  \
+    // Constructor \
+    public ClientHandler(DataInputStream dis, DataOutputStream dos) \
+    \{ \
+        this.dis=dis;\
+        this.dos=dos;\
+    \} \
+  \
+    @Override\
+    public void run()  \
+    \{   String rmsg, smsg,rest,word,cur_dir_temp, mkdir_temp,lastlast="";      \
+        String cur_dir=System.getProperty("user.dir");\
+        boolean input = true;\
+        \
+        while(input)\
+        \{   \
+        try\
+        \{  \
+            rmsg = dis.readUTF();\
+            while (rmsg!=null)\
+            \{\
+            int index = rmsg.indexOf(' ');\
+                if (index > -1) \
+                \{ \
+                word=rmsg.substring(0, index);\
+                rest= rmsg.substring(index+1);\
+                lastlast=Character.toString(rest.charAt(rest.length() - 1));\
+                System.out.println("Last character is : "+lastlast);\
+                System.out.println("Rest is : " + rest);\
+                \} else \
+                \{\
+                word=rmsg; \
+                rest="";\
+                \}\
+            if(rmsg != null && word.equals("pwd"))  \
+            \{\
+                 server.pwd(this.dos); \
+            \}         \
+            else if(rmsg != null && word.equals("ls"))\
+            \{\
+                server.ls(dos); \
+            \}\
+            else if (rmsg !=null && word.equals("cd"))\
+            \{\
+                server.cd(rest,dos);\
+            \}\
+\
+            else if (rmsg !=null && word.equals("cd.."))\
+            \{\
+                server.cddd(dos);\
+            \}\
+            else if (rmsg !=null && word.equals("mkdir"))\
+            \{\
+                server.makedir(rest,dos);\
+            \}   \
+            else if (rmsg !=null && word.equals("delete"))\
+            \{   \
+                server.delete(rest,dos);\
+            \}   \
+            else if (rmsg !=null && word.equals("get")&& !lastlast.equals("&"))\
+            \{  \
+                server.get(rmsg,rest,dos,dis);\
+                \
+            \}   \
+            else if (rmsg!=null && word.equals("get") && lastlast.equals("&"))\
+            \{  \
+                server.getand(rmsg,rest,dos,dis);\
+            \}\
+            else if (rmsg !=null && word.equals("put") && !lastlast.equals("&"))\
+            \{   \
+                server.put(rmsg,rest,dos,dis);\
+            \}\
+            else if (rmsg !=null && word.equals("put")&& lastlast.equals("&"))\
+            \{   \
+                System.out.println("Into ifelse of put and ");\
+                server.putand(rmsg,rest,dos,dis);\
+            \}\
+\
+            else if (rmsg !=null && word.equals("quit"))\
+            \{\
+                \
+                server.quit(dos,dis);\
+                input = false;\
+                break;\
+            \}\
+            rmsg=null;\
+            \
+          \}       \
+        \} \
+         \
+            catch (Exception e)\
+            \{ \
+                e.printStackTrace(); \
+            \} \
+        \}\
+\
+    \} \
+\
+\}\
+class Client_Terminate extends Thread\
+\{\
+    final DataInputStream dis2;\
+\
+    public Client_Terminate(DataInputStream dis2)\
+    \{\
+        this.dis2=dis2;\
+    \}\
+    @Override\
+    public void run()\
+    \{ \
+         String receive_terminate, word, rest;\
+         try\
+         \{\
+            while(true)\
+            \{\
+                receive_terminate=this.dis2.readUTF();\
+                if(receive_terminate!=null)\
+                \{   \
+                    System.out.println("Terminate command received");\
+                    int index = receive_terminate.indexOf(' ');\
+                    word=receive_terminate.substring(0, index);\
+                    System.out.println("Command is : "+word);\
+                    rest= receive_terminate.substring(index+1);\
+                    System.out.println("ID is : "+rest);\
+                    MultiThreadServer.terminateMap.put(Integer.parseInt(rest), false);\
+                    System.out.println(MultiThreadServer.terminateMap.get((Integer.parseInt(rest))));\
+                \}\
+            \}\
+        \}\
+        catch (Exception e)\
+        \{\
+            System.out.println(e);\
+        \}\
+    \}\
+\}\
+}
